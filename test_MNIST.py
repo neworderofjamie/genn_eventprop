@@ -4,11 +4,11 @@ import numpy as np
 
 p["DATASET"]= "MNIST"
 p["NAME"]= "test17"
-p["NUM_HIDDEN"]= 1000
+p["NUM_HIDDEN"]= 128
 p["N_MAX_SPIKE"]= 120
 p["DT_MS"]= 1
 p["DEBUG"]= False
-p["N_BATCH"]= 10
+p["N_BATCH"]= 128
 p["SHUFFLE"]= True
 p["LOAD_LAST"]= True
 

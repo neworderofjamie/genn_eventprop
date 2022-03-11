@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from time import perf_counter
 from pygenn import genn_model
 from pygenn.genn_wrapper import NO_DELAY
 import mnist
@@ -29,19 +30,19 @@ p["TEST_DATA_SEED"]= 456
 p["MODEL_SEED"]= None
 
 # Experiment parameters
-p["TRIAL_MS"]= 20.0
+p["TRIAL_MS"]= 100.0
 p["N_MAX_SPIKE"]= 400    # make buffers for maximally 400 spikes (200 in a 30 ms trial) - should be safe
 p["N_BATCH"]= 32
 p["SUPER_BATCH"]= 1
-p["N_TRAIN"]= 55000
-p["N_VALIDATE"]= 5000
+p["N_TRAIN"]= 60000
+p["N_VALIDATE"]= 0
 p["N_EPOCH"]= 10
 p["SHUFFLE"]= True
 p["N_TEST"]= 10000
 p["W_REPORT_INTERVAL"] = 100
 p["W_EPOCH_INTERVAL"] = 10
 # Network structure
-p["NUM_HIDDEN"] = 350
+p["NUM_HIDDEN"] = 128
 
 # Model parameters
 p["TAU_SYN"] = 5.0
@@ -285,7 +286,8 @@ class mnist_model:
         t= t/255.0*10.0
         return 10.0*np.log(t/(t-0.2))
 
-
+    def spike_time_from_gray3(self, t):
+        return 20.0 * np.log(t / (t - 51))
     """ 
     generate a spikeTimes array and startSpike and endSpike arrays to allow indexing into the 
     spikeTimes in a shuffled way
@@ -312,10 +314,11 @@ class mnist_model:
             if p["DATASET"] == "MNIST":
                 X= np.reshape(X,(N, self.num_input))
                 tx= X[i,:]
-                ix= tx > 1
+                ix= tx > 51
                 #ix= tx[tx > 5.1]
                 tx= tx[ix]
-                tx= self.spike_time_from_gray(tx)
+                #tx= self.spike_time_from_gray(tx)
+                tx= self.spike_time_from_gray3(tx)
                 self.max_stim_time= max(self.max_stim_time, np.amax(tx))
                 #tx= self.spike_time_from_gray2(tx)
                 i_end= np.cumsum(ix)+stidx_offset
@@ -630,6 +633,7 @@ class mnist_model:
         all_input_id= np.arange(Y.shape[0])
         self.input_set.extra_global_params["allInputID"].view[:len(all_input_id)]= all_input_id
         self.input_set.push_extra_global_param_to_device("allInputID")
+        start_train_time = perf_counter()
         for epoch in range(number_epochs):
 
             if N_train > 0 and shuffle:
@@ -801,7 +805,9 @@ class mnist_model:
                 if (epoch+1) % p["ETA_REDUCE_PERIOD"] == 0:
                     learning_rate *= p["ETA_REDUCE"]
                     adam_step= 1
-
+        
+        end_train_time = perf_counter()
+        print("Train time:%f ms" % ((end_train_time - start_train_time) * 1000.0))
         for pop in p["REC_SPIKES"]:
             spike_t[pop]= np.hstack(spike_t[pop])
             spike_ID[pop]= np.hstack(spike_ID[pop])
